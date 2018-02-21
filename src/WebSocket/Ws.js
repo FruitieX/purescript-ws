@@ -3,62 +3,27 @@
 const WebSocket = require('ws');
 
 /* Server methods */
-
-exports.createWebSocketServer_ = function (options) {
-  return function (callback) {
-    return function () {
-      var wss = new WebSocket.Server(options, callback);
-      return wss;
-    };
-  }
+exports.createWebSocketServer_ = function (options, callback) {
+  return new WebSocket.Server(options, callback);
 }
 
-exports.onConnection_ = function(wss) {
-  return function (handleConnection) {
-    return function() {
-      wss.on('connection', function(ws, req) {
-        handleConnection(ws)(req)();
-      });
-    }
-  }
+exports.onConnection_ = function(wss, handleConnection) {
+  wss.on('connection', handleConnection);
 }
 
-exports.onServerError_ = function(wss) {
-  return function (handleError) {
-    return function() {
-      wss.on('error', function(error) {
-        handleError(error)();
-      });
-    }
-  }
+exports.onServerError_ = function(wss, handleError) {
+  wss.on('error', handleError);
 }
 
 /* WebSocket methods */
-
-exports.onMessage_ = function(ws) {
-  return function (handleMessage) {
-    return function() {
-      ws.on('message', function(message) {
-        handleMessage(message)();
-      });
-    }
-  }
+exports.onMessage_ = function(ws, handleMessage) {
+  ws.on('message', handleMessage);
 }
 
-exports.sendMessage_ = function(ws) {
-  return function (message) {
-    return function() {
-      ws.send(message);
-    }
-  }
+exports.sendMessage_ = function(ws, message) {
+  ws.send(message);
 }
 
-exports.onError_ = function(ws) {
-  return function (handleError) {
-    return function() {
-      ws.on('error', function(error) {
-        handleError(error)();
-      });
-    }
-  }
+exports.onError_ = function(ws, handleError) {
+  ws.on('error', handleError);
 }

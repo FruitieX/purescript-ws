@@ -3,7 +3,7 @@ import Prelude
 
 import Control.Monad.Eff (Eff, kind Effect)
 import Control.Monad.Eff.Exception (Error)
-import Control.Monad.Eff.Uncurried (EffFn1, mkEffFn1)
+import Control.Monad.Eff.Uncurried (EffFn1, EffFn2, mkEffFn1, mkEffFn2, runEffFn2)
 import Data.Newtype (class Newtype)
 import Data.Record (insert)
 import Data.Symbol (SProxy(..))
@@ -33,9 +33,9 @@ newtype Port = Port Int
 
 foreign import createWebSocketServer_
   :: forall e options
-   . options
-  -> (EffFn1 (ws :: WS | e) Unit Unit)
-  -> Eff (ws :: WS | e) WebSocketServer
+   . EffFn2 (ws :: WS | e) options
+     (EffFn1 (ws :: WS | e) Unit Unit)
+     WebSocketServer
 
 -- | Creates a WebSocket.Server and internally a HTTP server
 -- | which binds to a given port
@@ -52,7 +52,7 @@ createWebSocketServerWithPort
   -> (Unit -> Eff (ws :: WS | e) Unit)
   -> Eff (ws :: WS | e) WebSocketServer
 createWebSocketServerWithPort (Port port) options callback =
-  createWebSocketServer_ options' callback'
+  runEffFn2 createWebSocketServer_ options' callback'
     where
       options' = insert (SProxy :: SProxy "port") port options
       callback' = mkEffFn1 callback
@@ -67,16 +67,17 @@ createWebSocketServerWithServer
   -> { | options }
   -> Eff (ws :: WS | e) WebSocketServer
 createWebSocketServerWithServer server options =
-  createWebSocketServer_ options' callback'
+  runEffFn2 createWebSocketServer_ options' callback'
     where
       options' = insert (SProxy :: SProxy "server") server options
       callback' = mkEffFn1 $ const (pure unit)
 
 foreign import onConnection_
   :: forall e
-   . WebSocketServer
-  -> (WebSocketConnection -> Request -> Eff (ws :: WS | e) Unit)
-  -> Eff (ws :: WS | e) Unit
+   . EffFn2 (ws :: WS | e)
+     WebSocketServer
+     (EffFn2 (ws :: WS | e) WebSocketConnection Request Unit)
+     Unit
 
 -- | Attaches a connection event handler to a WebSocketServer
 onConnection
@@ -85,13 +86,14 @@ onConnection
   -> (WebSocketConnection -> Request -> Eff (ws :: WS | e) Unit)
   -> Eff (ws :: WS | e) Unit
 onConnection server callback =
-  onConnection_ server callback
+  runEffFn2 onConnection_ server (mkEffFn2 callback)
 
 foreign import onServerError_
   :: forall e
-   . WebSocketServer
-  -> (Error -> Eff (ws :: WS | e) Unit)
-  -> Eff (ws :: WS | e) Unit
+   . EffFn2 (ws :: WS | e)
+     WebSocketServer
+     (EffFn1 (ws :: WS | e) Error Unit)
+     Unit
 
 -- | Attaches an error event handler to a WebSocketServer
 onServerError
@@ -100,13 +102,14 @@ onServerError
   -> (Error -> Eff (ws :: WS | e) Unit)
   -> Eff (ws :: WS | e) Unit
 onServerError server callback =
-  onServerError_ server callback
+  runEffFn2 onServerError_ server (mkEffFn1 callback)
 
 foreign import onMessage_
   :: forall e
-   . WebSocketConnection
-  -> (WebSocketMessage -> Eff (ws :: WS | e) Unit)
-  -> Eff (ws :: WS | e) Unit
+   . EffFn2 (ws :: WS | e)
+     WebSocketConnection
+     (EffFn1 (ws :: WS | e) WebSocketMessage Unit)
+     Unit
 
 -- | Attaches a message event handler to a WebSocketConnection
 onMessage
@@ -115,13 +118,14 @@ onMessage
   -> (WebSocketMessage -> Eff (ws :: WS | e) Unit)
   -> Eff (ws :: WS | e) Unit
 onMessage ws callback =
-  onMessage_ ws callback
+  runEffFn2 onMessage_ ws (mkEffFn1 callback)
 
 foreign import sendMessage_
   :: forall e
-   . WebSocketConnection
-  -> WebSocketMessage
-  -> Eff (ws :: WS | e) Unit
+   . EffFn2 (ws :: WS | e)
+     WebSocketConnection
+     WebSocketMessage
+     Unit
 
 -- | Send a message over a WebSocketConnection
 sendMessage
@@ -130,13 +134,14 @@ sendMessage
   -> WebSocketMessage
   -> Eff (ws :: WS | e) Unit
 sendMessage ws message =
-  sendMessage_ ws message
+  runEffFn2 sendMessage_ ws message
 
 foreign import onError_
   :: forall e
-   . WebSocketConnection
-  -> (Error -> Eff (ws :: WS | e) Unit)
-  -> Eff (ws :: WS | e) Unit
+   . EffFn2 (ws :: WS | e)
+     WebSocketConnection
+     (EffFn1 (ws :: WS | e) Error Unit)
+     Unit
 
 -- | Attaches an error event handler to a WebSocketConnection
 onError
@@ -145,4 +150,4 @@ onError
   -> (Error -> Eff (ws :: WS | e) Unit)
   -> Eff (ws :: WS | e) Unit
 onError ws callback =
-  onError_ ws callback
+  runEffFn2 onError_ ws (mkEffFn1 callback)
