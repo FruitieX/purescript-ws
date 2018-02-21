@@ -20,10 +20,18 @@ exports.onMessage_ = function(ws, handleMessage) {
   ws.on('message', handleMessage);
 }
 
-exports.sendMessage_ = function(ws, message) {
-  ws.send(message);
+exports.onClose_ = function(ws, handleClose) {
+  ws.on('close', handleClose);
 }
 
 exports.onError_ = function(ws, handleError) {
   ws.on('error', handleError);
+}
+
+exports.sendMessage_ = function(ws, message) {
+  ws.send(message);
+}
+
+exports.close_ = function(ws, code, reason) {
+  ws.close(code, reason);
 }

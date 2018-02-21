@@ -3,7 +3,7 @@ import Prelude
 
 import Control.Monad.Eff (Eff, kind Effect)
 import Control.Monad.Eff.Exception (Error)
-import Control.Monad.Eff.Uncurried (EffFn1, EffFn2, mkEffFn1, mkEffFn2, runEffFn2)
+import Control.Monad.Eff.Uncurried (EffFn1, EffFn2, EffFn3, mkEffFn1, mkEffFn2, runEffFn2, runEffFn3)
 import Data.Newtype (class Newtype)
 import Data.Record (insert)
 import Data.Symbol (SProxy(..))
@@ -30,6 +30,9 @@ type WebSocketServerOptions =
 
 -- | The port to listen on if calling createWebSocketServerWithPort
 newtype Port = Port Int
+
+newtype CloseCode = CloseCode Int
+newtype CloseReason = CloseReason String
 
 foreign import createWebSocketServer_
   :: forall e options
@@ -120,21 +123,21 @@ onMessage
 onMessage ws callback =
   runEffFn2 onMessage_ ws (mkEffFn1 callback)
 
-foreign import sendMessage_
+foreign import onClose_
   :: forall e
    . EffFn2 (ws :: WS | e)
      WebSocketConnection
-     WebSocketMessage
+     (EffFn2 (ws :: WS | e) CloseCode CloseReason Unit)
      Unit
 
--- | Send a message over a WebSocketConnection
-sendMessage
+-- | Attaches a close event handler to a WebSocketConnection
+onClose
   :: forall e
    . WebSocketConnection
-  -> WebSocketMessage
+  -> (CloseCode -> CloseReason -> Eff (ws :: WS | e) Unit)
   -> Eff (ws :: WS | e) Unit
-sendMessage ws message =
-  runEffFn2 sendMessage_ ws message
+onClose ws callback =
+  runEffFn2 onClose_ ws (mkEffFn2 callback)
 
 foreign import onError_
   :: forall e
@@ -151,3 +154,46 @@ onError
   -> Eff (ws :: WS | e) Unit
 onError ws callback =
   runEffFn2 onError_ ws (mkEffFn1 callback)
+
+foreign import sendMessage_
+  :: forall e
+   . EffFn2 (ws :: WS | e)
+     WebSocketConnection
+     WebSocketMessage
+     Unit
+
+-- | Send a message over a WebSocketConnection
+sendMessage
+  :: forall e
+   . WebSocketConnection
+  -> WebSocketMessage
+  -> Eff (ws :: WS | e) Unit
+sendMessage ws message =
+  runEffFn2 sendMessage_ ws message
+
+foreign import close_
+  :: forall e
+   . EffFn3 (ws :: WS | e)
+     WebSocketConnection
+     CloseCode
+     CloseReason
+     Unit
+
+-- | Initiate a closing handshake
+close
+  :: forall e
+   . WebSocketConnection
+  -> Eff (ws :: WS | e) Unit
+close ws =
+  -- 1000 is the CloseCode for normal closure
+  runEffFn3 close_ ws (CloseCode 1000) (CloseReason "Closed by server")
+
+-- | Initiate a closing handshake with given code and reason
+close'
+  :: forall e
+   . WebSocketConnection
+  -> CloseCode
+  -> CloseReason
+  -> Eff (ws :: WS | e) Unit
+close' ws code reason =
+  runEffFn3 close_ ws code reason
