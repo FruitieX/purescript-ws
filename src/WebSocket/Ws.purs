@@ -66,7 +66,7 @@ createWebSocketServerWithServer
    . Union options options' WebSocketServerOptions
   => RowLacks "server" options
   => RowCons "server" Server options trash
-  => Port
+  => Server
   -> { | options }
   -> Eff (ws :: WS | e) WebSocketServer
 createWebSocketServerWithServer server options =
