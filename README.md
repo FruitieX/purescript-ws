@@ -11,6 +11,11 @@ occurs with the `WebSocketConnection` (such as ECONNRESET from a client that
 abruptly closed its end of the connection). This behavior is caused by the `ws`
 library.
 
+## Setup
+
+1. Install `ws` from npm.
+2. Have a look at the documentation/example
+
 ## TODO
 
 - Force user to supply `WebSocketConnection` event handlers in
